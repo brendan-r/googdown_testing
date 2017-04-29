@@ -1,0 +1,25 @@
+---
+title: NEW FILE
+author: Jane Doe
+date: December 26, 2016
+output: html_document
+googdown:
+  doc_id: 1EuPYZ5rleyKAaZn6baKm6BlKvwZkQXNq1WY0RgpQPkM
+---
+
+```{r echo=FALSE}
+# This is to test code blocks which produce no output, and so can't easily be
+# diffed
+d <- data.frame(x = rnorm(10), y = rnorm(10))
+```
+
+Important Subheading
+--------------------
+
+This is a sentence, which I've changed locally. My favorite number is `r 2 + 2`.
+
+Here's a plot:
+
+```{r echo=FALSE, fig.width=8, fig.cap="Thisiscool"}
+plot(d)
+```

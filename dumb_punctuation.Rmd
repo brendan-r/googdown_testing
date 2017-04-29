@@ -1,0 +1,22 @@
+
+Not currently a pandoc option, but you might be able to work around it with a small find and replace script: https://github.com/jgm/pandoc/issues/1517
+
+
+```haskell
+dumbDownChar :: Char -> String
+dumbDownChar '\160' = " "
+dumbDownChar '\8211' = "--"
+dumbDownChar '\8212' = "---"
+dumbDownChar '\8230' = "..."
+dumbDownChar '\8216' = "'"
+dumbDownChar '\8217' = "'"
+dumbDownChar '\8220' = "\""
+dumbDownChar '\8221' = "\""
+dumbDownChar c = [c]
+
+dumbDown :: Inline -> [Inline]
+dumbDown (Str cs) = [Str $ concatMap dumbDownChar cs]
+dumbDown (Quoted SingleQuote ils) = [Str "'"] ++ ils ++ [Str "'"]
+dumbDown (Quoted DoubleQuote ils) = [Str "\""] ++ ils ++ [Str "\""]
+dumbDown il = [il]
+```

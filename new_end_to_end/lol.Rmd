@@ -1,0 +1,21 @@
+---
+title: Cool file
+author: Jane Doe
+date: December 26, 2016
+output: html_document
+googdown:
+  doc_id: 1ZMZcVV3mRFoPwL31CRHaJ1x3VETxuDDTvS9KID0a_5Q
+
+---
+`{r echo=FALSE} # This is to test code blocks which produce no output, and so can't easily be # diffed set.seed(1) d <- data.frame(x = rnorm(10), y = rnorm(10))`
+
+Bubheading
+----------
+
+Remote change. My favorite number is `r 2 + 2`.
+
+Here's a plot:
+
+`{r echo=FALSE} plot(d)`
+
+New sentence.

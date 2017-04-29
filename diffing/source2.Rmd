@@ -1,0 +1,26 @@
+---
+title: Cool file
+author: Jane Doe
+date: December 26, 2016
+output: md_document
+---
+
+```{r echo=FALSE}
+# This is to test code blocks which produce no output, and so can't easily be
+# diffed
+knitr::opts_chunk$set(echo = FALSE)
+d <- data.frame(x = rnorm(10), y = rnorm(10))
+```
+
+
+Important Subheading
+--------------------
+
+This is a sentence, which I've changed locally. My favorite number is `r 2 + 2`.
+
+Here's a plot:
+
+```{r fig.width=4, fig.cap="This is my caption"}
+plot(d)
+```
+

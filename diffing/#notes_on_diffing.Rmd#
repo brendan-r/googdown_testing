@@ -1,0 +1,460 @@
+# Notes to self
+
+
+- You now have something that ALMOST works, but:
+  - You need to do something about how it handles diffs during `map_lines`. It could be that map_lines outputs a more complex object for this sort of thing
+  - You need a function to tidy up missing commas in JSON. jsonlite::validate provides a way to find where the problems are, though regex may do just as well.
+
+
+So, you're leaving this at just after 1 am on the last Saturday before yo go
+back to work!
+
+And you still haven't got unknitting working... Ugh. But, you are probably a
+little closer.
+
+You've added an 'ignore tailing commas' arg to the diff function. This is not
+useful for remote -> local changes, but could be useful for unknitting (both for
+mapping, and genearting the diff itself).
+
+You could probably use a function to fix trailing commas on JSON just to make
+things easier.
+
+This is a lot of effort, and not that much fun. But, possibly worth it. You're
+close!
+
+
+
+
+## Unrendering
+
+Thinking of the diffing problem is less taxing if you think of it as *lines of text* as opposed to nexted json structures.
+
+This allows you to make the following assumptions:
+
+- The input file is valid JSON
+- The output file is valid JSON
+- Therefore, applying diffs between the two produces valid JSON
+
+This means that for the question of creating a 'filter' for changes that can be applied, this effectively means creating indicies of line numbers.
+
+## Functions
+
+`tools::Rdiff` appears to provide a simple interface to GNU diff from R, with some embelishments to make it more useful for working with R files (which shouldn't be a problem for you). It makes a system call to GNU diff, so it seems like that's a dependency for R after all.
+
+`diffobj::diffFile` is from a package designed for diffing R objects, but which can be used to diff text files all the same. It bundles it's own version of Myers' algorithm, written in C by the author, and heavily modified.
+
+## Approaches
+
+The R interfaces are more similar than they are different. It probably makes most sense for you to get an idea of how GNU diff works, and then try and see what you can get out if it.
+
+## Understanding diff output
+
+### Normal format
+
+*letters*
+
+`a` addition
+`d` deletion
+`c` changing
+
+3c3,21 means, in file1, line 3, was replaced with the contents of lines 3 - 21 in file2.
+
+5a24,75 means that line 5 in file1 was replaced with the contents of lines 24 - 75 in file2.
+
+### Unified format
+
+This is the `@@ 1,3 / 1,3 @@` format.
+
+It's seems to be more of a visual thing, and less useful for programmatic input.
+
+
+## Unknitting
+
+It's inadequate, but as a start, let's try the unknitting process as a simple
+find and replace.
+
+A problem that you have is that R code will often produce nothing in the source (e.g. it is database connections or whatever).
+
+- pandoc does not render / like R code in curly braces with parameters. It
+treats them as odd inline code, as opposed to code-blocks.
+
+- So, you have a problem in that there is enough commonality in the JSON that
+you often get 'fractured' diffs --- one peice of dynamic code results in
+multiple diffs.
+
+- A lot of this comes down to the representation that you use for the JSON
+    - You could make lines whole c/t pairs. This might actully be the easiest
+        way to do it re: find and replace. This is probably a good thing to do.
+    - You could then use a/d for block-changes, and where there's a change, it
+      would probably be in-line.
+
+- It could also be worth seeing if diffObj on lists works well
+
+- You could maybe do something with diffing lines with lapply and jsonlite
+
+
+- A way around this might be to make a first pass of changes at the 'paragraph'
+level, to at least take care of 'code' block type changes. By working at this level, you avoid
+
+- You could then take a second pass, and do in-line changes. This is where you
+could use `adist` to flag unlikely things.
+
+
+
+```{r}
+setwd("diffing")
+library(magrittr)
+library(googdown)
+
+# Knit, upload, download, and retrieve ASTs of documents -----------------------
+
+gd_auth()
+
+write_ast <- function(x, output_file) {
+  system(paste0("pandoc ", x, " -t json"), intern = TRUE) %>%
+    jsonlite::prettify() %>%
+    writeLines(output_file)
+}
+
+write_ast <- function(x, output_file) {
+  system(paste0("pandoc ", x, " -t json"), intern = TRUE) %>%
+    fold_ast_json() %>%
+    writeLines(output_file)
+}
+
+
+
+no_yaml <- function(file) {
+  googdown:::partition_yaml_front_matter(readLines(file))$body
+}
+
+# Render locally, upload and download the file
+rmarkdown::render("source.Rmd", output_format = "md_document")
+gd_auth()
+req <- gd_upload("source.Rmd", format = "open_office_doc")
+gd_download(req$id, file_name = "remote1.json", output_format = "json")
+
+# Make a change remotely here
+menu(letters[1:3])
+
+gd_download(req$id, file_name = "remote2.json", output_format = "json")
+
+source_tf <- tempfile(fileext = ".Rmd")
+writeLines(no_yaml("source.Rmd"), source_tf)
+
+rmd_to_ast(source_tf, "_source.ast")
+md_to_ast("source.md", "_local.ast")
+write_ast("remote1.json", "_remote1.ast")
+write_ast("remote2.json", "_remote2.ast")
+
+
+gd_delete(req$id)
+
+```
+
+
+
+# Something seemed to work!
+
+- The question now is whether you could use this to map directly between Rmd and google docs.
+  - It may be easiest to figure this out by writing tests
+  - This would mean that any dynamically generated content could not be removed... Would it?
+  - You should also write a function to allow you to bring back metadata changes (afayct this is just changes to the title)
+  - You should see if the word doc that Noam etc. came up with is useful
+
+Unknitting:
+  - If you have to, this could be done in two passes: once for blocks (e.g. paragraphs), and a final pass for inline code.
+
+
+## MD merge: How could you write tests?
+
+- Upload a file
+- Upload a change to that file, using a different document
+- Bring the changes back down
+- Compare the merged-original and changed documents, if identical, hooray!
+
+
+-------------------------------------------------------------
+
+## Unknitting:
+
+- Problems with find and replace: There will be many chunks which do not generate any content in the final document (e.g. used for initial set-up, database connections, etc.)
+
+- Because of no-output code blocks, the process will need to be:
+  1. Unknit the ORIGINAL markdown document, using a find and replace based on the original source AST and the original rendered AST (block and inline levels). This has no regard for no-output code chunks.
+  2. Do the same unknitting procedure for the NEW Rmarkdown document
+  3. A mapped diff-merge
+    - Create the line-mapping between the AST of the original source, and the AST of the 'unknitted' markdown of the original source (e.g. no-output chunks are established as immovable)
+    - Use the map to bring the changes in the NEW unknitted source into the original Rmd AST
+    - Convert the AST back to rmarkdown
+
+__What about citations?__
+
+These would have cruft in the document that never makes it back to the source file. This would then be a matter of inline find and replace.
+
+
+### Blocks
+
+- An option might be:
+
+- Use diffing between source and local to determine which chunks have any output
+- If they do, map them to the output
+- If they don't, map them as immovable
+- Knit meta may be useful for the above, if diff gets confused (but it shouldn't, with one line-per para diffing).
+
+### Inline
+
+It's probably okay to assume that
+
+- All inline R code generates something
+- All citations generate something
+
+The best solution here is probably to determine if the same output is ever produced by different dynamic inputs.
+
+- If not, you can try and use find and replace
+- If so, you can use adist to try and work out if it's from the same paragraph, or ask for user input if it's unclear
+
+## Sources of 'dynamic content'
+
+- R code blocks
+- R code inline
+- Citations/references
+- 'Smart' punctuation (one-to-one, reversible, can't do via pandoc)
+    - Note: Text entered via the web-UI also get smart punctuation, so a
+    deterministic find and replace is preferable to some kind of diffing
+- Equations (should be handed by the doc formats)
+- Footnotes (should be handed by the doc formats)
+
+It seems like citations and inline R code can be handled in the same way.
+
+## Markdown features not preserved by the AST
+
+- Inline vs reference links (pandoc's AST makes no distinction)
+    - Could be that you just make the user pick this, and add it to the YAML.
+    Can be specified with the `--reference-links` and `--reference-location`
+    options.
+
+## Features not preserved by Google's representation
+
+- Inline code
+- Code blocks
+  - Code is just represented as a font change
+- Soft vs hard lists (Google's representation only has the spaced out ones).
+This isn't a big deal, just convert them all to the spaced out ones.
+- Unsure if the equations functionality is as fully featured as MathJax
+
+## Google features not preserved by the pandoc AST
+
+- Changes, in font, colour, etc.
+
+
+## Solutions to the above
+
+- Deterministic functions
+  - Smart punctuation
+- 'unrendering' (diffing Rmd and source)
+  - R code inline
+  - R code blocks
+  - citations
+- Converting the source before processing
+  - List types
+  - Link types
+- Flagging as unsupported (until we have a GAS writer)
+  - Code: Inline or block
+- Flagging as intentionally unsupported
+  - Changes in font, colour, etc.
+
+
+# Unknitting
+
+- Why not just use `knit_meta` for find and replace?
+  - Many code chunks output nothing at all, which is pretty difficult to find
+
+
+Should you just do this with text, or should you try and use the *types* (code block, etc.)? Try with just text first.
+
+WORD DIFFING WORKS! AT LEAST FOR NOW!
+
+Use it!
+
+
+
+Problem:
+
+A para which has been knitted into another appers as a chnage, not adding and removal.
+
+-- This is a problem, as you cannot distinguish between line para knits
+
+Another approach might be to diff recursively through the structure, untill you find something which is code, or a citation...
+
+Or, just parse the tree in R. Look to see if a chunk is the same, when it isn't, go to the next chunk in the original tree, and find the place where it next crops up. The items between the two are items in the new JSON.
+
+
+
+
+
+
+```{r}
+# This works again now :)
+remote_diff_to_local("_remote1.ast", "_local.ast", "_remote2.ast", "_local2.ast")
+# unknit_new_md("_source.ast", "_local.ast", "_local2.ast")
+
+
+# Write a new function which handles the map diff patch process
+
+#' @export
+patch <- function(file1, file2, difflist, patched_file) {
+
+  patch_strings(file1, file2, difflist) %>% writeLines(patched_file)
+
+  # At this point, you need a function to fix problems with trailing commas in
+  # output
+
+
+  # Run it through pandoc once more, just to tidy up the AST
+  # system(paste(
+  #   "pandoc", patched_file, "-f json -t json -o", patched_file
+  # ))
+}
+
+
+map_diff_patch <- function(original, revised, source, output_file, filter_diffs = TRUE) {
+
+  map <- map_lines(original, source)
+
+  # Diff the two remote files, extract the lines which have changed
+  diff_object <- diff_list(original, revised)
+
+  # Determine if any of the diffs concern areas of the AST which can't
+  # *meaningfully* be propagated back to the local markdown source's AST. All
+  # additions *should* (?) be fine
+  #
+  # For changes / subtractions -- if any positive digit isn't in `map`, remove it
+  if (filter_diffs) {
+  diff_object <- diff_object %>%
+    lapply(function(x) {
+      # If there's nothing to remove, then you're fine
+      if (any(is.na(x$file1_remove))) return(x)
+      # The lines which are flagged as changeable from the mapping between
+      # remote1 and local1
+      changeable_lines <- map$file1[!is.na(map$file2)]
+      # The lines in remote1 which we hope to change
+      lines_to_be_changed <- x$file1_remove
+
+      if (all(lines_to_be_changed %in% changeable_lines)) x else NULL
+    }) %>%
+    Filter(Negate(is.null), .)
+  }
+
+
+  # Alter the diff object, so that the lines from remote1 are changed to their
+  # equivalents in local1
+  map_ind <- function(x) {
+    if (any(is.na(x))) return(NA)
+    map$file2[x]
+  }
+
+  # The line numbers for the remote1 - remote2 diff, but with remote1's line
+  # numbers replaced with the equivalents (where available) from local1
+  offset_diff <- diff_object %>%
+    lapply(function(x){
+      x$file1_at     <- map_ind(x$file1_at)
+      x$file1_remove <- map_ind(x$file1_remove)
+      x
+    })
+
+  # Apply the offset diff object (containing the diffs between the two remote
+  # files), and use it to apply a patch to the original markdown source
+  patch(source, revised, offset_diff, output_file)
+}
+
+
+
+
+unknit <- function(local1, local2, source, output_file) {
+
+  l1 <- tempfile()
+  l2 <- tempfile()
+  s  <- tempfile()
+
+  fold_ast_json(local1, local1)
+  fold_ast_json(local2, local2)
+  fold_ast_json(source, source)
+
+
+  map <- map_lines(local2, local1, ignore_trailing_commas = TRUE)
+
+  # Diff the two remote files, extract the lines which have changed
+  diff_object <- diff_list(local1, source, ignore_trailing_commas = TRUE)
+
+  # Determine if any of the diffs concern areas of the AST which can't
+  # *meaningfully* be propagated back to the local markdown source's AST. All
+  # additions *should* (?) be fine
+  #
+  # For changes / subtractions -- if any positive digit isn't in `map`, remove it
+  if (filter_diffs) {
+  diff_object <- diff_object %>%
+    lapply(function(x) {
+      # If there's nothing to remove, then you're fine
+      if (any(is.na(x$file1_remove))) return(x)
+      # The lines which are flagged as changeable from the mapping between
+      # remote1 and local1
+      changeable_lines <- na.omit(map$file2)
+      # The lines in remote1 which we hope to change
+      lines_to_be_changed <- x$file1_remove
+
+      if (all(lines_to_be_changed %in% changeable_lines)) x else NULL
+    }) %>%
+    Filter(Negate(is.null), .)
+  }
+
+
+  # Alter the diff object, so that the lines from remote1 are changed to their
+  # equivalents in local1
+  map_ind <- function(x) {
+    if (any(is.na(x))) return(NA)
+    map$file1[map$file2 %in% x]
+  }
+
+  # The line numbers for the remote1 - remote2 diff, but with remote1's line
+  # numbers replaced with the equivalents (where available) from local1
+  offset_diff <- diff_object %>%
+    lapply(function(x){
+      # Note: The below is a dirty hack, which needs to be fixed What's
+      # happening is, that for an addition, the line above has changed. This
+      # means that it can't find a reference for it. It could be that you can
+      # excuse lines which have been changed (as opposed to added) in the case
+      # of additions. This would require making the output of map_lines()
+      # slightly more complicated, but it wouldn't be a huge deal
+      x$file1_at     <- if(x$type != "a") map_ind(x$file1_at) else x$file1_at
+      x$file1_remove <- map_ind(x$file1_remove)
+      x
+    })
+
+  # Apply the offset diff object (containing the diffs between the two remote
+  # files), and use it to apply a patch to the original markdown source
+  patch(local2, source, offset_diff, output_file)
+
+  # At this point, rund the code to transform the code-blocks
+}
+
+
+
+map_diff_patch("_remote1.ast", "_remote2.ast", "_local.ast", "_local2.ast")
+
+map_diff_patch("_local.ast", "_source.ast", "_local2.ast", "_unknit.ast")
+
+unknit("_local.ast", "_source.ast", "_local2.ast", "_unknit.ast")
+
+
+# This does not work because the code folding is working incorreclty. Line 56-57 or `_folded_new.ast` are borked --- the image should be broken out from within the para, as should the sentence below it. This is probably some error to do with the depth specification.
+
+
+fold_ast_json("_local.ast", "_folded_rendered.ast")
+fold_ast_json("_source.ast", "_folded_source.ast")
+fold_ast_json("_local2.ast", "_folded_new.ast")
+
+map_diff_patch("_folded_rendered.ast", "_folded_source.ast", "_folded_new.ast", "_unknit.ast")
+
+
+```

@@ -1,0 +1,31 @@
+[
+{"unMeta":{"googdown":{"t":"MetaMap","c":{"doc_id":{"t":"MetaInlines","c":[{"t":"Str","c":"1YagY7rV70vGb5p03yRe2WPPkUM5dlcJ9yd9U_JrBjvg"}]}}},"date":{"t":"MetaInlines","c":[{"t":"Str","c":"December"},{"t":"Space","c":[]},{"t":"Str","c":"26,"},{"t":"Space","c":[]},{"t":"Str","c":"2016"}]},"output":{"t":"MetaInlines","c":[{"t":"Str","c":"html_document"}]},"author":{"t":"MetaInlines","c":[{"t":"Str","c":"Jane"},{"t":"Space","c":[]},{"t":"Str","c":"Doe"}]},"title":{"t":"MetaInlines","c":[{"t":"Str","c":"Cool"},{"t":"Space","c":[]},{"t":"Str","c":"file"}]}}},
+  [
+{"t":"Header","c":[2,["important-subheading",[],[]],[{"t":"Str","c":"Important"},{"t":"Space","c":[]},{"t":"Str","c":"Subheading"}]]},
+    {
+"t": "Para",
+"c": [
+{"t":"Str","c":"This"},
+{"t":"Space","c":[]},{"t":"Str","c":"is"},
+{"t":"Space","c":[]},{"t":"Str","c":"a"},
+{"t":"Space","c":[]},{"t":"Str","c":"sentence,"},
+{"t":"Space","c":[]},{"t":"Str","c":"which"},
+{"t":"Space","c":[]},{"t":"Str","c":"I've"},
+{"t":"Space","c":[]},{"t":"Str","c":"changed"},
+{"t":"Space","c":[]},{"t":"Str","c":"locally."},
+{"t":"Space","c":[]},{"t":"Str","c":"My"},
+{"t":"Space","c":[]},{"t":"Str","c":"favorite"},
+{"t":"Space","c":[]},{"t":"Str","c":"number"},
+{"t":"Space","c":[]},{"t":"Str","c":"is"},
+{"t":"Space","c":[]},{"t":"Str","c":"4."},
+{"t":"Space","c":[]},{"t":"Str","c":"Here's"},
+{"t":"Space","c":[]},{"t":"Str","c":"a"},
+{"t":"Space","c":[]},{"t":"Str","c":"plot:"},
+{"t":"SoftBreak","c":[]},
+{"t":"Image","c":[["",[],[]],[],["/tmp/Rtmp3OZNvA/test_files/figure-markdown_strict/unnamed-chunk-2-1.png",""]]},
+{"t":"SoftBreak","c":[]},
+{"t":"Str","c":"ffffffffffffffffffffffffff."}
+      ]
+    }
+  ]
+]

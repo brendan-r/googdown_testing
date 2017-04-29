@@ -1,6 +1,6 @@
 This is a paragraph.
 
-```sql
+```
 -- This is a comment in the sql
 select
   user_id,

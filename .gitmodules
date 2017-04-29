@@ -1,0 +1,3 @@
+[submodule "googdown"]
+	path = googdown
+	url = https://github.com/brendan-r/googdown.git

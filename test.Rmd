@@ -1,0 +1,14 @@
+---
+title: Cool file
+author: Jane Doe
+date: December 26, 2016
+output: html_document
+googdown:
+  doc_id: 12HV-TtwrLs52ZQvdNpBQ0kozRjPNrf7_I3UUOtLn-zY
+---
+
+
+## Subheading
+
+This is a sentence.
+

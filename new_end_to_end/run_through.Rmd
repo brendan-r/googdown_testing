@@ -1,0 +1,73 @@
+# Run through
+
+This file contains some code to try and use the googdown package in and end-to-end manner. It's not a formal test, but could inform them.
+
+
+```{r}
+
+unlink(".googdown/", recursive = TRUE, force = TRUE)
+file.copy("original.Rmd", "test.Rmd", overwrite = TRUE)
+
+library(googdown)
+library(magrittr)
+
+gd_auth()
+
+cat(brocks::read_txt("test.Rmd"))
+
+# ul <- gd_upload("test.Rmd")
+
+ul <- gdoc_push("test.Rmd")
+
+cat(brocks::read_txt("test.Rmd"))
+
+# Make changes remotely
+
+ul <- gd_pull("test.Rmd")
+
+cat(brocks::read_txt("test.Rmd"))
+
+unlink(".googdown/", recursive = TRUE, force = TRUE)
+
+```
+
+- Text which gets echo'ed completely goofs this up. You might want to have some kind of check for that (could consult knit_meta)
+
+- You'll need to do some explicit input:output matching with figure captions. At the moment it just borks the whole thing.
+
+- THere is something borking figure captions before they get sent to Google
+
+- You need to do something about codeblocks which produce something
+  - You can and should allow these to be deleted
+  - You can and should have warnings if things change
+
+- You could write something to fix up lists, if you wanted to
+
+
+
+
+
+```{r}
+
+# Obtain a file with pandoc codeblock
+lines <- readLines(googdown:::ast_to_md("3-source.ast"))
+
+pandoc_fenced_to_knitr_block(lines)
+
+## TODO:
+##  - Add spaces before and after headings, codeblocks, etc
+
+
+
+# Lines which start with 3 backticks
+backtick_lines <- (1:length(lines))[grepl("^```", lines)]
+
+codeblock_starts <- backtick_lines[1:length(backtick_lines) %% 2 == 0]
+codeblock_ends   <- backtick_lines[1:length(backtick_lines) %% 2 == 1]
+
+
+brocks::read_txt("blah.md")
+
+```
+
+

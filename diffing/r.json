@@ -1,0 +1,11 @@
+[
+  {
+    "unMeta": {}
+  },
+  [
+    {"c":[[2],[["important-subheading"],[],[]],[{"c":["Important"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["Subheading"],"t":["Str"]}]],"t":["Header"]},
+    {"c":[{"c":["This"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["is"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["a"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["sentence,"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["which"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["I've"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["changed"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["locally."],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["My"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["favorite"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["number"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["is"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["4."],"t":["Str"]}],"t":["Para"]},
+    {"c":[{"c":["Here's"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["a"],"t":["Str"]},{"c":[],"t":["Space"]},{"c":["plot:"],"t":["Str"]}],"t":["Para"]},
+    {"c":[{"c":[[[""],[],[]],[],[["source_files/figure-markdown_strict/unnamed-chunk-1-1.png"],["fig:"]]],"t":["Image"]}],"t":["Para"]}
+  ]
+]

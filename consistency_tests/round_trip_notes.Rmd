@@ -1,0 +1,256 @@
+---
+title: "Upload and Download Formats: Notes on Round-trips"
+date: "December 24, 2016"
+output: html_document
+---
+
+Google docs allows documents to be uploaded and downloaded in various formats, and happily, many of these overlap usefully with the formats offered by pandoc.
+
+However, not all features of a document survive the 'round trip', being converted from markdown, to the upload format, to a Google doc, to the download format, and then back to markdown.
+
+This document goes through each combination of upload and download format[^1], and runs some simple tests to determine if the integrity of the underlying document is maintained.
+
+```{r}
+library(tidyverse)
+library(brocks)
+library(googdown)
+
+get_ast <- function(x) {
+  system(paste0("pandoc ", x, " -t json"), intern = TRUE)
+}
+
+# A function to extract the (unique) names of the AST elements contained in a
+# document
+ast_elements <- function(json_string) {
+  # Read in the json string as a list, and then flatten it
+  elements <- unlist(jsonlite::fromJSON(json_string, simplifyVector = FALSE))
+  
+  # Find the unique content types, and return them alphabetical order
+  sort(unique(elements[grepl(".*t", names(elements))]))
+}
+
+# A function to return a bool; do two documents have *extactly the same* AST?
+same_ast <- function(x, y) {
+  x_ast <- get_ast(x)
+  y_ast <- get_ast(y)
+  
+  x_ast == y_ast
+}
+
+# A function to return a bool; Are all AST elements in X, also in Y?
+same_ast_elements <- function(x, y) {
+  x_ast <- get_ast(x)
+  y_ast <- get_ast(y)
+  
+  all(ast_elements(x_ast) %in% ast_elements(y_ast))
+}
+```
+
+```{r}
+# Some code to try out a few different features with different combinations of
+# readers and writers
+
+setwd("consistency_tests")
+
+# Init a data.frame to store results in
+results <- na.omit(data.frame(
+  test              = NA, 
+  upload_format     = NA, 
+  download_format   = NA, 
+  same_ast          = NA,
+  same_ast_elements = NA
+))
+
+# Get vectors of the parameters which we'd like to try-out together
+upload_formats   <- names(googdown:::file_types())
+download_formats <- googdown:::reader_list()
+test_files       <- normalizePath(list.files(
+  "test_cases", full.names = TRUE
+))
+
+
+setwd("results")
+
+# These tests are time-consuming. If the tests have been run in the same format
+# before, fall-back to loading a cached-file of the results. The 'same tests' is
+# defined as the same upload and download formats, and the same test cases.
+
+input_hash <- digest::digest(
+  c(lapply(test_files, function(x) openssl::md5(read_txt(x))),
+    download_formats,
+    upload_formats),
+  algo = "md5"
+)
+
+d <- dir.create(".cached_results")
+cache_dir  <- normalizePath(".cached_results")
+cache_file <- paste0(cache_dir, "/", input_hash, ".rds")
+
+gd_auth()
+
+# Obtain results
+if (file.exists(cache_file)) {
+  # If you've already run these tests, read-in the results from last time
+  results <- readRDS(cache_file)
+} else {
+  # Iterate through the combinations of upload and download formats, checking if
+  # the AST (and AST elements) have been maintained
+  for (u in upload_formats) {
+    for (d in download_formats) {
+      # Create a dir to store the results in
+      result_dir <- paste0(u, "-", d)
+      dir.create(result_dir)
+      setwd(normalizePath(result_dir))
+      
+      for (t in test_files) {
+        # Upload the test file to google docs
+        upload <- gd_upload(file_name = t, format = u)
+        
+        # Download the test file
+        returned_file_name <- paste0("returned-", basename(t))
+        download <- gd_download(
+          file_id = upload$id, file_name = returned_file_name,
+          format = d, output_format = "markdown"
+        )
+        
+        # See if it came out the same, put the results in the output data.frame
+        results <- bind_rows(
+          results, 
+          data.frame(
+            test              = basename(t),
+            upload_format     = u, 
+            download_format   = d,
+            same_ast          = same_ast(t, returned_file_name),
+            same_ast_elements = same_ast_elements(t, returned_file_name)
+          )
+        )
+        
+        # Delete the google doc, to keep the account managable
+        gd_delete(upload$id)
+      }
+      # Pop a level up the dir structure
+      setwd("..")
+    }
+  }
+  # Save the results for next time
+  saveRDS(results, cache_file)
+} 
+
+# Print out the whole darn data.frame
+results <- results %>% 
+  mutate(
+    combo_id = as.numeric(factor(paste0(upload_format, download_format)))
+  )
+
+```
+
+
+## Features retained (or not)
+
+```{r}
+results %>% 
+  group_by(test) %>% summarise(mu = mean(same_ast)) %>%
+  arrange(desc(mu))
+
+results %>% 
+  group_by(test) %>% summarise(mu = mean(same_ast_elements)) %>%
+  arrange(desc(mu))
+
+```
+
+Features with no equivalent in Google docs:
+
+- Code, in-line
+- Code, in-blocks
+- Figure captions
+- Table captions
+
+### Basic text (pargraphs and formatting)
+
+Regardless of input format, using HTML as an output format loses bold, italic, super-script and sub-script.
+
+```{r}
+results %>% filter(test == "bold_italic.md")
+
+read_txt("../test_cases/hyperlink.md")
+read_txt("open_office_doc-ms_word_doc/returned-hyperlink.md")
+read_txt("ms_word_doc-open_office_doc/returned-hyperlink.md")
+
+
+cat(read_txt("../test_cases/list_bulleted.md"))
+cat(read_txt("open_office_doc-ms_word_doc/returned-list_bulleted.md"))
+cat(read_txt("ms_word_doc-open_office_doc/returned-list_bulleted.md"))
+cat(read_txt("ms_word_doc-ms_word_doc/returned-list_bulleted.md"))
+
+```
+
+
+
+
+### Lists
+
+Pandoc has two types of lists: 'loose' (entries separted with newlines, each entry formatted as a paragraph) and 'soft' (no newlines between entries). Google docs has no distinction -- all lists are loose.
+
+
+### Hyperlinks (and link hi-jacking)
+
+Where HTML is the output format, all the links are hijacked.
+
+```{r}
+results %>% filter(test == "hyperlink.md")
+
+read_txt("../test_cases/hyperlink.md")
+read_txt("open_office_doc-ms_word_doc/returned-hyperlink.md")
+read_txt("ms_word_doc-open_office_doc/returned-hyperlink.md")
+
+
+cat(read_txt("../test_cases/list_bulleted.md"))
+cat(read_txt("open_office_doc-ms_word_doc/returned-list_bulleted.md"))
+cat(read_txt("ms_word_doc-open_office_doc/returned-list_bulleted.md"))
+cat(read_txt("ms_word_doc-ms_word_doc/returned-list_bulleted.md"))
+
+```
+
+
+
+
+## Best performing format combinations
+
+In terms of preserving the same AST, uploading as an open-office document, and downloading as an MS Word document produces the most faithful results overall across tests.
+
+```{r}
+results %>% group_by(upload_format, download_format) %>% 
+  summarise(mu = mean(same_ast)) %>% 
+  arrange(desc(mu))
+
+results %>% group_by(upload_format, download_format) %>% 
+  summarise(mu = mean(same_ast_elements)) %>% 
+  arrange(desc(mu))
+```
+
+## Which features require which combinations?
+
+Are there are any features which cannot be acheived with open office -> MS Word, but can be achieved with others?
+
+Yes -- numbered lists are not preserved with any MS Word output, or any Rich Text input. However, they are preserved (down to the exact AST) with Open Office -> Open Office.
+
+```{r}
+ow_id <- results %>% 
+  filter(
+    upload_format == "open_office_doc" & download_format == "ms_word_doc"
+  ) %>% select(combo_id) %>% unique() %>% .$combo_id
+
+possible_features <- results %>% 
+  filter(same_ast_elements) %>% select(test) %>% unique() %>% .[,1]
+
+possible_features[!possible_features %in% 
+  filter(results, same_ast_elements & combo_id == ow_id)$test]
+
+results %>% filter(test == "list_numbered.md")
+
+```
+
+
+---------------------------
+
+[^1]: EPUB is a promising format supported by both Pandoc and Google docs, which has not been considered here.

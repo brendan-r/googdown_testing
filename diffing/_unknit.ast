@@ -1,0 +1,61 @@
+[
+  {
+"unMeta": {}
+  },
+  [
+{"t":"CodeBlock","c":[["",["r"],[["echo","FALSE"]]],"# This is to test code blocks which produce no output, and so can't easily be\\n# diffed\\nd <- data.frame(x = rnorm(10), y = rnorm(10))"]},
+    {
+"t": "Header",
+"c": [
+        2,
+["important-subheading",[],[]],
+        [
+{"t":"Str","c":"Important"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"Subheading!!"}
+        ]
+      ]
+    },
+    {
+"t": "Para",
+"c": [
+{"t":"Str","c":"My"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"favorite"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"number"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"is"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"4."},
+{"t":"Space","c":[]},
+{"t":"Str","c":"This"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"is"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"a"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"remote"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"change."}
+      ]
+    },
+    {
+"t": "Para",
+"c": [
+{"t":"Str","c":"A"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"plot"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"is"},
+{"t":"Space","c":[]},
+{"t":"Str","c":"there:"}
+      ]
+    },
+{"t":"CodeBlock","c":[["",["r"],[["echo","FALSE"]]],"plot(d)"]}
+    },
+    {
+"t": "Para",
+"c": [{"t":"Str","c":"New-sentence."}]
+  ]
+]
